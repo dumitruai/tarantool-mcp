@@ -3,18 +3,37 @@
   "version": "1.0.0",
   "description": "MCP server for managing Tarantool database",
   "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "type": "module",
   "bin": {
     "tarantool-mcp": "./dist/index.js"
   },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc",
+    "prepublishOnly": "npm run build",
     "start": "node dist/index.js",
     "dev": "tsc --watch"
   },
-  "keywords": ["mcp", "tarantool", "database"],
+  "keywords": [
+    "mcp",
+    "tarantool",
+    "database",
+    "model-context-protocol",
+    "claude",
+    "ai"
+  ],
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "engines": {
+    "node": ">=18"
+  },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
     "tarantool-driver": "^3.0.8",
