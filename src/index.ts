@@ -12,13 +12,13 @@ const server = new McpServer({
 
 const tarantool = new TarantoolConnection();
 
-// Configuration from environment variables
-const config = {
+// Set configuration from environment variables (lazy connect on first use)
+tarantool.setConfig({
   host: process.env.TARANTOOL_HOST ?? "localhost",
   port: parseInt(process.env.TARANTOOL_PORT ?? "3301", 10),
   username: process.env.TARANTOOL_USERNAME,
   password: process.env.TARANTOOL_PASSWORD,
-};
+});
 
 // Eval tool
 server.registerTool(
@@ -164,10 +164,6 @@ server.registerTool(
 );
 
 async function main() {
-  // Connect to Tarantool on startup
-  await tarantool.connect(config.host, config.port, config.username, config.password);
-  console.error(`Connected to Tarantool at ${config.host}:${config.port}`);
-
   const transport = new StdioServerTransport();
   await server.connect(transport);
   console.error("Tarantool MCP server running on stdio");

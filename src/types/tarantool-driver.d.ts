@@ -5,6 +5,7 @@ declare module "tarantool-driver" {
     username?: string;
     password?: string;
     timeout?: number;
+    lazyConnect?: boolean;
     retryStrategy?: (times: number) => number | null;
   }
 

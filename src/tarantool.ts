@@ -1,19 +1,55 @@
 import TarantoolDriver from "tarantool-driver";
 
+export interface TarantoolConfig {
+  host: string;
+  port: number;
+  username?: string;
+  password?: string;
+}
+
 export class TarantoolConnection {
   private connection: TarantoolDriver | null = null;
+  private config: TarantoolConfig | null = null;
+  private connecting: Promise<void> | null = null;
 
-  async connect(
-    host: string,
-    port: number,
-    username?: string,
-    password?: string
-  ): Promise<void> {
+  setConfig(config: TarantoolConfig): void {
+    this.config = config;
+  }
+
+  async connect(): Promise<void> {
+    if (!this.config) {
+      throw new Error("Tarantool configuration not set");
+    }
+
+    // Already connected
+    if (this.connection) {
+      return;
+    }
+
+    // Connection in progress, wait for it
+    if (this.connecting) {
+      return this.connecting;
+    }
+
+    this.connecting = this.doConnect();
+    try {
+      await this.connecting;
+    } finally {
+      this.connecting = null;
+    }
+  }
+
+  private async doConnect(): Promise<void> {
+    if (!this.config) {
+      throw new Error("Tarantool configuration not set");
+    }
+
     this.connection = new TarantoolDriver({
-      host,
-      port,
-      username,
-      password,
+      host: this.config.host,
+      port: this.config.port,
+      username: this.config.username,
+      password: this.config.password,
+      lazyConnect: true,
     });
 
     await this.connection.connect();
@@ -26,20 +62,20 @@ export class TarantoolConnection {
     }
   }
 
-  private ensureConnected(): TarantoolDriver {
+  private async ensureConnected(): Promise<TarantoolDriver> {
     if (!this.connection) {
-      throw new Error("Not connected to Tarantool");
+      await this.connect();
     }
-    return this.connection;
+    return this.connection!;
   }
 
   async eval(code: string, args: unknown[] = []): Promise<unknown> {
-    const conn = this.ensureConnected();
+    const conn = await this.ensureConnected();
     return conn.eval(code, args);
   }
 
   async call(func: string, args: unknown[] = []): Promise<unknown> {
-    const conn = this.ensureConnected();
+    const conn = await this.ensureConnected();
     return conn.call(func, ...args);
   }
 
@@ -50,7 +86,7 @@ export class TarantoolConnection {
     limit?: number,
     offset?: number
   ): Promise<unknown> {
-    const conn = this.ensureConnected();
+    const conn = await this.ensureConnected();
     const spaceId = await this.resolveSpace(space);
     const indexId = index !== undefined ? await this.resolveIndex(spaceId, index) : 0;
 
@@ -58,13 +94,13 @@ export class TarantoolConnection {
   }
 
   async insert(space: string | number, tuple: unknown[]): Promise<unknown> {
-    const conn = this.ensureConnected();
+    const conn = await this.ensureConnected();
     const spaceId = await this.resolveSpace(space);
     return conn.insert(spaceId, tuple);
   }
 
   async replace(space: string | number, tuple: unknown[]): Promise<unknown> {
-    const conn = this.ensureConnected();
+    const conn = await this.ensureConnected();
     const spaceId = await this.resolveSpace(space);
     return conn.replace(spaceId, tuple);
   }
@@ -74,13 +110,13 @@ export class TarantoolConnection {
     key: unknown[],
     operations: unknown[]
   ): Promise<unknown> {
-    const conn = this.ensureConnected();
+    const conn = await this.ensureConnected();
     const spaceId = await this.resolveSpace(space);
     return conn.update(spaceId, 0, key, operations);
   }
 
   async delete(space: string | number, key: unknown[]): Promise<unknown> {
-    const conn = this.ensureConnected();
+    const conn = await this.ensureConnected();
     const spaceId = await this.resolveSpace(space);
     return conn.delete(spaceId, 0, key);
   }
